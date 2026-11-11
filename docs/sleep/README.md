@@ -17,7 +17,7 @@ normal agent requests.
 One "night":
 
 ```
-harvest Claude Code / Codex / VS Code Copilot / Cursor / Pi / OpenCode transcripts → mine recurring tasks → replay via the configured backend (isolation varies by backend; mock/handoff make no network calls)
+harvest Claude Code / Codex / VS Code Copilot / Cursor / Pi / OpenCode / DeepSeek Harness (dsh) transcripts → mine recurring tasks → replay via the configured backend (isolation varies by backend; mock/handoff make no network calls)
    → consolidate (reflect → bounded edit → GATE on real held-out tasks)
    → stage proposal → (you) adopt
 ```
@@ -375,6 +375,62 @@ configuration, history, and isolation details.
 For scheduled runs, configure the source, database, executable, and model in
 `~/.skillopt-sleep/config.json` as needed. Set `opencode_tool_replay` to `true`
 there to opt in to tool-aware replay.
+
+### DeepSeek Harness (dsh)
+
+Use `--source dsh` to read local DeepSeek Harness session logs. dsh stores them
+below `~/.dsh/sessions`, one directory per session, as v4 JSONL
+(`session.v4.jsonl.zstd`; the plain `session.v4.jsonl` layout is also read).
+Override the root with `--dsh-sessions-dir` or the `dsh_sessions_dir` config
+key. `--source auto` keeps its Codex-then-Claude precedence and does not select
+dsh.
+
+Router and worker sessions are both harvested on purpose: dsh does the actual
+coding work in its worker sessions, so dropping sub-agent transcripts the way
+the other source adapters do would discard the most valuable material. A
+session is kept only when it has a real user or assistant turn, falls inside
+the harvest window, and matches the project scope.
+
+The adapter is read-only: it never writes to the session store and makes no
+network call. Visible user and assistant text pass through the shared secret
+redactor plus a pass that removes e-mail addresses, credentials embedded in URL
+userinfo, and well-known credential directories before the text can reach a
+backend. Digests carry the session id, the agent preset
+(`dsh-superagent-router`, `dsh-superagent-worker`, ...), the delegation depth,
+and the store path; mined tasks keep the session in `source_sessions` and its
+profile/lineage in tags (`profile:...`, `lineage:delegation=N`). Harvest order
+is deterministic (newest first, path tie-break) and a session id is harvested
+at most once.
+
+Compressed logs need a Zstandard decoder: Python 3.14's `compression.zstd`, the
+optional `zstandard` package, or a system `libzstd`. Without one the compressed
+sessions are skipped with a warning; a corrupt or truncated log is skipped
+instead of aborting the walk.
+
+Harvesting is opt-in. Set `dsh_allowed_projects` to the absolute project paths
+to mine; a session matches when its recorded `cwd` equals one of them or lives
+below one. The allowlist applies even with `--scope all`, and `--scope all`
+warns when the list is empty because every project in the store would be
+eligible. Inspect mined text with `harvest --output` before pointing a real
+backend at it, and validate a new source with synthetic fixtures and
+`--backend mock` before any handoff or hosted evaluation. Raw session content
+is never written to a PR, handoff file, or staged proposal.
+
+```bash
+skillopt-sleep harvest --project "$(pwd)" --source dsh \
+  --dsh-sessions-dir ~/.dsh/sessions --progress
+```
+
+For scheduled or repeated runs, put the source and allowlist in
+`~/.skillopt-sleep/config.json`; the managed scheduler does not preserve
+`--source` or `--dsh-sessions-dir`:
+
+```json
+{
+  "transcript_source": "dsh",
+  "dsh_allowed_projects": ["/home/you/.dsh/state/superagent", "/home/you/src/mission-control"]
+}
+```
 
 ### Cursor
 

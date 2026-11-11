@@ -26,7 +26,7 @@ from typing import Any, Callable, Dict, List
 from skillopt_sleep import prompts as prompt_registry
 from skillopt_sleep.backend import Backend, _extract_json
 from skillopt_sleep.judges import char_bound
-from skillopt_sleep.mine import session_skill_hint
+from skillopt_sleep.mine import provenance_tags, session_skill_hint
 from skillopt_sleep.types import SessionDigest, TaskRecord
 
 
@@ -120,7 +120,8 @@ def _mk_task(d: SessionDigest, obj: Dict[str, Any], idx: int) -> TaskRecord | No
             id=tid, project=d.project, intent=intent,
             reference_kind="rubric", reference=rubric,
             outcome="success" if satisfied else "fail",
-            tags=["mined:llm"], source_sessions=[d.session_id],
+            tags=["mined:llm"] + provenance_tags(d),
+            source_sessions=[d.session_id],
             skill_hint=session_skill_hint(d),
         )
     if clean_checks:
@@ -128,7 +129,8 @@ def _mk_task(d: SessionDigest, obj: Dict[str, Any], idx: int) -> TaskRecord | No
             id=tid, project=d.project, intent=intent,
             reference_kind="rule", judge=judge,
             outcome="success" if satisfied else "fail",
-            tags=["mined:llm"], source_sessions=[d.session_id],
+            tags=["mined:llm"] + provenance_tags(d),
+            source_sessions=[d.session_id],
             skill_hint=session_skill_hint(d),
         )
     return None  # not checkable -> drop

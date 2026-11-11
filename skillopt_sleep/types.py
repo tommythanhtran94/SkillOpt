@@ -18,7 +18,8 @@ class SessionDigest:
     """A normalized summary of one local agent session transcript.
 
     Produced by source-specific harvesters from Claude Code transcripts, Codex
-    Desktop archived sessions, or Cursor Agent transcripts.
+    Desktop archived sessions, DeepSeek Harness session logs, or Cursor Agent
+    transcripts.
     """
 
     session_id: str
@@ -38,6 +39,19 @@ class SessionDigest:
     n_user_turns: int = 0
     n_assistant_turns: int = 0
     raw_path: str = ""
+    # Tool-result records the source marked as mechanically failed, counted
+    # from evidence already present in the transcript (dsh ``isError``). Kept
+    # separate from ``feedback_signals``: a transient tool failure is normal in
+    # agentic work and is not the user's judgment of the task. Optional and
+    # default-zero; added after the original fields for positional compatibility.
+    n_tool_failures: int = 0
+    # Deployment lineage, when the source records it (dsh's ``agentPreset``:
+    # the profile preset that produced the session, e.g. a router vs worker).
+    # The session id in ``session_id`` plus this preset and the delegation depth
+    # are the provenance a mined task carries. Empty/zero for sources that do
+    # not identify their deployment.
+    agent_preset: str = ""
+    delegation_depth: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
