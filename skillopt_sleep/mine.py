@@ -50,6 +50,24 @@ def session_skill_hint(digest: SessionDigest) -> str:
     return unique[0] if len(unique) == 1 else ""
 
 
+def provenance_tags(digest: SessionDigest) -> List[str]:
+    """Deployment-lineage tags for a digest, when the source records them.
+
+    The session id already travels in ``TaskRecord.source_sessions``; these
+    tags add the profile preset that produced the session and its delegation
+    depth, so a mined task can be traced back to its worker lineage. Empty for
+    sources that do not identify their deployment.
+    """
+    tags: List[str] = []
+    preset = getattr(digest, "agent_preset", "") or ""
+    if preset:
+        tags.append("profile:" + preset)
+    depth = getattr(digest, "delegation_depth", 0)
+    if isinstance(depth, int) and not isinstance(depth, bool) and depth > 0:
+        tags.append("lineage:delegation=" + str(depth))
+    return tags
+
+
 def _looks_negative(signals: List[str]) -> bool:
     return any(s.startswith("neg:") for s in signals)
 
@@ -199,6 +217,7 @@ def heuristic_mine(
             tags.append("tools:" + "+".join(d.tools_used[:4]))
         if d.git_branch:
             tags.append("branch:" + d.git_branch)
+        tags.extend(provenance_tags(d))
 
         tasks.append(
             TaskRecord(

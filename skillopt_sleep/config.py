@@ -34,8 +34,13 @@ DEFAULTS: Dict[str, Any] = {
     "vscode_workspace_storage": "",  # "" => auto-detect platform defaults
     "copilot_cli_session_store": "",  # "" => ~/.copilot/session-store.db
     "opencode_db": "",  # "" => OPENCODE_DB or the OpenCode XDG data path
-    # Explicit sources also include copilot, copilot_cli, cursor, pi, and opencode.
-    # ``auto`` keeps the established Codex-then-Claude precedence.
+    "dsh_sessions_dir": "",  # "" => ~/.dsh/sessions
+    # Opt-in allowlist of dsh project paths (absolute). Empty = the normal
+    # ``projects`` scope decides; when set, only sessions whose cwd is one of
+    # these paths or below one are harvested, even under scope "all".
+    "dsh_allowed_projects": [],
+    # Explicit sources also include copilot, copilot_cli, cursor, dsh, pi, and
+    # opencode. ``auto`` keeps the established Codex-then-Claude precedence.
     "transcript_source": "claude",
     "projects": "invoked",        # "invoked" | "all" | [list of abs paths]
     "invoked_project": "",        # filled at runtime (cwd) when projects == "invoked"
@@ -149,6 +154,13 @@ class SleepConfig:
     def cursor_projects_dir(self) -> str:
         cursor_home = os.path.abspath(os.path.expanduser(str(self.data["cursor_home"])))
         return os.path.join(cursor_home, "projects")
+
+    @property
+    def dsh_sessions_dir(self) -> str:
+        value = self.data.get("dsh_sessions_dir", "") or ""
+        if not value:
+            return os.path.join(os.path.expanduser("~"), ".dsh", "sessions")
+        return os.path.abspath(os.path.expanduser(str(value)))
 
     @property
     def copilot_cli_session_store(self) -> str:

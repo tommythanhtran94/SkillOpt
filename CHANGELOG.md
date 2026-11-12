@@ -77,6 +77,16 @@ All notable changes to SkillOpt are documented here. This project adheres to
   and skill, Cursor transcript harvesting, and an optional Cursor Agent CLI
   backend. Cursor tool-aware replay remains disabled pending live permission-
   boundary validation.
+- **DeepSeek Harness (dsh) transcript source** for SkillOpt-Sleep
+  (`--source dsh`): reads the local v4 JSONL session logs under
+  `~/.dsh/sessions`, including router and worker sessions, and turns visible
+  user/assistant text, tool names, skills, and tool outcomes into session
+  digests. The source is read-only, records session/preset/delegation
+  provenance, harvests deterministically without duplicates, redacts
+  credentials and contact details before text can reach a backend, and takes
+  an explicit `dsh_allowed_projects` opt-in allowlist. Compressed logs are
+  read with Python 3.14's `compression.zstd`, the optional `zstandard`
+  package, or the system `libzstd`.
 - **Cursor Agent research target harness** (`cursor_exec`) for running
   supported benchmark rollouts through an installed, authenticated
   `cursor-agent`, with sandboxed workspaces, structured trace capture, and

@@ -158,7 +158,7 @@ Common options for the nightly actions include:
 |---|---|
 | `--project PATH` | Project used for transcript scope, targets, state, and staging (default: current directory) |
 | `--scope invoked\|all` | Harvest this project or all projects |
-| `--source claude\|codex\|copilot\|cursor\|pi\|opencode\|auto` | Transcript source; `auto` keeps Codex-then-Claude precedence and does not select Copilot, Cursor, Pi, or OpenCode |
+| `--source claude\|codex\|copilot\|copilot_cli\|cursor\|dsh\|pi\|opencode\|auto` | Transcript source; `auto` keeps Codex-then-Claude precedence and does not select Copilot, Cursor, dsh, Pi, or OpenCode |
 | `--backend mock\|claude\|codex\|copilot\|cursor\|pi\|opencode\|handoff\|azure_openai` | Replay/optimizer backend |
 | `--model NAME` | Backend-specific model override |
 | `--cursor-home PATH` | Override `~/.cursor` for Cursor transcript harvesting |
@@ -168,6 +168,7 @@ Common options for the nightly actions include:
 | `--pi-path PATH` | Path to the installed Pi coding-agent CLI |
 | `--opencode-path PATH` | Path to the installed OpenCode CLI |
 | `--opencode-db PATH` | Path to the OpenCode SQLite history database |
+| `--dsh-sessions-dir PATH` | Override `~/.dsh/sessions` for DeepSeek Harness transcript harvesting |
 | `--opencode-tool-replay` | Enable OpenCode tool-aware replay for `tool_called` checks in rule judges |
 | `--preferences TEXT` | House rules supplied to reflection |
 | `--lookback-hours N` | Initial transcript lookback; `0` scans all history |
@@ -350,6 +351,25 @@ The managed scheduler stores the backend but not `--source`, `--opencode-db`,
 `"opencode_tool_replay": true` only when the scheduled run should enable
 tool-aware replay. Use absolute database and executable paths, and verify
 OpenCode access when the scheduled run uses the backend.
+
+### DeepSeek Harness (dsh) source
+
+`--source dsh` reads dsh's local v4 session logs below `~/.dsh/sessions`
+(read-only, no network). Override the root with `--dsh-sessions-dir` or the
+`dsh_sessions_dir` config key; `--source auto` does not select dsh. Router and
+worker sessions are both harvested, because the worker sessions carry the
+actual coding work. Compressed logs (`session.v4.jsonl.zstd`) need a Zstandard
+decoder — Python 3.14+, the optional `zstandard` package, or a system
+`libzstd` — and are skipped with a warning when none is available; corrupt or
+truncated logs are skipped rather than aborting the harvest.
+
+Digests carry the session id, agent preset, delegation depth, and store path;
+mined tasks record the session in `source_sessions` and the profile/lineage in
+tags. Visible text passes the shared secret redactor plus an e-mail, URL
+userinfo, and credential-path pass before it can reach a backend. Harvesting
+is opt-in: set `dsh_allowed_projects` to the absolute project paths to mine.
+The allowlist applies under `--scope all`, which warns when the list is empty.
+Inspect `harvest --output` before pointing a real backend at the result.
 
 ### Cursor source and backend
 
